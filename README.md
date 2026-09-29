@@ -11,7 +11,7 @@ It covers the three tasks in `task.md`:
 
 1. **RGB human boundary** — `rgb_boundary.py`
 2. **Thermal human boundary** — `thermal_boundary.py`
-3. **Theory with derivations** — `theory.md` (also generated as `theory.docx`)
+3. **Theory with derivations** — Fourier-domain derivations
 
 A Flask web app demonstrates everything interactively.
 
@@ -26,7 +26,7 @@ removing low frequencies keeps edges and discards smooth interiors. The *region*
 is found classically (skin-colour thresholding for RGB, hot-body thresholding
 for thermal) and its *exact boundary* is the contour traced around the cleaned
 mask, with the frequency-domain gradient and high-pass edge maps computed
-alongside. See `theory.md` for the full derivations.
+alongside.
 
 ## Files
 
@@ -37,8 +37,6 @@ alongside. See `theory.md` for the full derivations.
 | `thermal_boundary.py` | Task 2 — thermal image → same outputs |
 | `sam2_segment.py` | Runs SAM2 locally (box-prompted) to produce reference masks |
 | `compare_sam2.py` | IoU / Dice / pixel-accuracy / boundary-F1 vs SAM2 → table + CSV |
-| `theory.md` / `theory.docx` | Task 3 — Fourier-domain derivations |
-| `make_docx.py` | Regenerates `theory.docx` from `theory.md` |
 | `app.py` + `templates/` + `static/` | Flask web demo |
 | `Dockerfile`, `docker-compose.yml`, `requirements.txt` | Packaging |
 
