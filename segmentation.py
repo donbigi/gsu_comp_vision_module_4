@@ -5,11 +5,12 @@ no machine learning, and no learned models.
 The pipeline has three conceptual pieces, all of which use only fixed
 thresholds, linear filtering, morphology and connected components:
 
-  1.  Region detection              — spectral-residual saliency (a Fourier
-                                      domain method) locates the *whole* salient
-                                      body in RGB, confirmed by skin-colour;
-                                      hot-body (Otsu) thresholding does the same
-                                      for thermal.
+  1.  Region detection              — Otsu figure-ground thresholding splits the
+                                      person from the background in RGB,
+                                      confirmed by skin-colour and spectral-
+                                      residual saliency (the Fourier-domain
+                                      analogue); hot-body (Otsu) thresholding
+                                      does the same for thermal.
   2.  Frequency-domain edge detection — the Fourier transform of the image is
                                       multiplied by a high-pass (or derivative)
                                       transfer function to find *boundaries*.
@@ -233,6 +234,25 @@ def components_overlapping(mask: np.ndarray, seed: np.ndarray, min_fraction: flo
 # ======================================================================
 
 
+def otsu_figure_ground(gray: np.ndarray) -> np.ndarray:
+    """Split the person (foreground) from the background with Otsu's method.
+
+    Otsu's method is a statistical threshold (not machine learning): it picks the
+    intensity threshold T that best separates the image's two intensity classes.
+    In a typical "person in a scene" photo the person occupies less of the frame
+    than the background, so the person is the *minority* class.  Both polarities
+    are tried and the smaller class is returned — this finds a dark-clothed
+    person against a light background and a light-clothed person against a dark
+    background equally well.
+    """
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    dark = binary == 0      # pixels at or below T
+    bright = binary == 255  # pixels above T
+    person = dark if int(dark.sum()) <= int(bright.sum()) else bright
+    return person.astype(np.uint8) * 255
+
+
 def skin_mask(bgr: np.ndarray) -> np.ndarray:
     """Skin-colour mask from a BGR image, using fixed YCrCb thresholds.
 
@@ -363,34 +383,31 @@ def mask_overlay(image: np.ndarray, mask: np.ndarray, color=(0, 255, 0), alpha=0
 def segment_rgb(bgr: np.ndarray) -> dict:
     """Segment the human in an RGB image and return every intermediate.
 
-    Pipeline: spectral-residual saliency (Fourier domain) -> optional skin
-    confirmation -> morphology -> largest component -> boundary.  The
-    frequency-domain gradient and high-pass edge maps are computed in parallel
-    and returned for visualisation.
+    Pipeline: Otsu figure-ground threshold -> skin confirmation -> morphology ->
+    largest component -> boundary.  The frequency-domain gradient, high-pass edge
+    map and spectral-residual saliency are computed in parallel and returned for
+    visualisation (saliency is the Fourier-domain analogue of the region cue).
 
-    Saliency is the *primary* cue: it is a purely Fourier-domain method (see
-    `spectral_residual_saliency`) and it finds the whole salient body — clothing
-    included — against the background, on colour *and* monochrome images alike.
-    Skin colour is a *supporting* cue, consulted only when it covers a plausible
-    fraction of the frame: real skin (face/hands) confirms which salient
-    component is the person and adds back pixels saliency missed, whereas a
-    sepia print or skin-toned clothing (which fires the chrominance band over
-    most of the image) is correctly ignored.
+    Otsu figure-ground is the *primary* cue: it splits the person from the
+    background by intensity, and because it works on clothing — not just skin —
+    it finds a fully dressed subject as one solid region.  Skin colour and
+    spectral-residual saliency are *supporting* cues: real skin (face/hands)
+    confirms which region is the person and adds back pixels the threshold
+    missed, while the saliency map demonstrates that the same foreground can be
+    located in the frequency domain.
     """
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
 
-    # 1. Primary cue: spectral-residual saliency (Fourier domain).  Most of the
-    #    log-amplitude spectrum of a natural image is a smooth, predictable 1/f
-    #    background; the residual highlights the statistically surprising
-    #    frequencies, which are exactly those coding the salient body.
-    saliency = spectral_residual_saliency(gray)
-    mask = otsu_binary(saliency)
+    # 1. Primary cue: figure-ground separation by Otsu's method.  The person is
+    #    the minority intensity class, found whether it is darker or brighter
+    #    than the background.
+    mask = otsu_figure_ground(gray)
 
     # 2. Supporting cue: skin colour, only when genuinely present.  Human skin
-    #    occupies a narrow Cr/Cb band; if that band fires over too little of the
-    #    frame there is no useful skin, and over too much of it the "skin" is
-    #    really a warm print or skin-toned clothing — in either case saliency
-    #    alone is trusted.
+    #    occupies a narrow Cr/Cb band; over too little of the frame there is no
+    #    useful skin, and over too much of it the "skin" is really a warm print
+    #    or skin-toned background — in either case the figure-ground mask alone
+    #    is trusted.
     raw_skin = skin_mask(bgr)
     skin_frac = float((raw_skin > 0).mean())
     if 0.005 < skin_frac < 0.30:
@@ -401,6 +418,8 @@ def segment_rgb(bgr: np.ndarray) -> dict:
     #    connected component — the person.
     mask = clean_mask(mask)
     mask = largest_component(mask)
+
+    saliency = spectral_residual_saliency(gray)
 
     contour = boundary_from_mask(mask)
     gradient = fourier_gradient(gray)

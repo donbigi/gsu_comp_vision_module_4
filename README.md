@@ -23,10 +23,10 @@ the frequency domain — `DFT{∂f/∂x} = j·2πu·F(u,v)` — so a gradient (a
 detector) is simply a *high-pass* filter. And an edge (a step) has energy that
 decays only slowly with frequency, while a smooth region decays fast — so
 removing low frequencies keeps edges and discards smooth interiors. The *region*
-is found classically (skin-colour thresholding for RGB, hot-body thresholding
-for thermal) and its *exact boundary* is the contour traced around the cleaned
-mask, with the frequency-domain gradient and high-pass edge maps computed
-alongside.
+is found classically (figure-ground Otsu thresholding, confirmed by skin-colour
+and spectral-residual saliency, for RGB; hot-body Otsu thresholding for thermal)
+and its *exact boundary* is the contour traced around the cleaned mask, with the
+frequency-domain gradient, high-pass edge maps and saliency computed alongside.
 
 ## Files
 
@@ -75,7 +75,7 @@ skip the comparison gracefully instead of crashing.
 
 | Image | Classical coverage | IoU vs SAM2 | Dice | Pixel acc | Boundary F1 |
 | ----- | ------------------ | ----------- | ---- | --------- | ----------- |
-| RGB (portrait)    | 26.9% | 0.70 | 0.82 | 0.91 | 0.37 |
+| RGB (full-length seated portrait) | 28.8% | 0.86 | 0.93 | 0.96 | 0.46 |
 | Thermal (PDIWS)   | 14.2% | 0.43 | 0.60 | 0.89 | 0.38 |
 
 The classical method recovers the person's silhouette with no training data,
@@ -95,6 +95,9 @@ and spectral-residual saliency side by side, with the IoU vs SAM2.
 
 ## Test images
 
-- `images/rgb_person.jpg` — a CC0 full-body portrait (Wikimedia Commons).
+- `images/rgb_person.jpg` — a CC BY-SA full-length studio portrait of a seated
+  woman in dark clothing against a plain white background (Wikimedia Commons:
+  "Melanie Williamson"). The clean figure-ground separation makes it ideal for
+  the classical method while still giving SAM2 a natural colour photograph.
 - `images/thermal_person.jpg` — a thermal frame from the Roboflow thermal
   dataset linked in `task.md`.
