@@ -19,3 +19,8 @@ venv/
 # OS / editor
 .DS_Store
 .claude/
+
+# Report generation (local-only)
+theory.md
+theory.docx
+make_docx.py
