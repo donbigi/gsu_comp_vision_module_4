@@ -1,0 +1,8 @@
+services:
+  human:
+    build: .
+    image: gsu-cv-module4-human:latest
+    container_name: human-boundary-demo
+    ports:
+      - "8000:8000"
+    restart: unless-stopped

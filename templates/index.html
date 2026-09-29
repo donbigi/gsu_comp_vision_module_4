@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Human Boundary Detection — Classical vs SAM2</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <header class="masthead">
+    <div class="wrap">
+      <h1>Human Boundary Detection: <span>Fourier-domain</span> classical CV</h1>
+      <p class="sub">Find the exact boundary of a person with fixed thresholds, spectral-residual
+        saliency and frequency-domain edge detection — then compare against the
+        <em>SAM2</em> deep-learning baseline.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <!-- ============ CONTROLS ============ -->
+    <section class="card controls">
+      <div class="control">
+        <label for="mode">Camera</label>
+        <select id="mode">
+          <option value="rgb" selected>RGB (colour)</option>
+          <option value="thermal">Thermal (infrared)</option>
+        </select>
+      </div>
+
+      <div class="control">
+        <label for="source">Image source</label>
+        <select id="source">
+          <option value="default" selected>Default test image</option>
+          <option value="upload">Upload</option>
+        </select>
+      </div>
+
+      <div class="control" id="upload-control" hidden>
+        <label for="file">File</label>
+        <input type="file" id="file" accept="image/*" />
+      </div>
+
+      <button id="run">Detect boundary</button>
+    </section>
+
+    <!-- ============ METRICS ============ -->
+    <section class="metrics" id="metrics">
+      <div class="metric">
+        <div class="metric-label">person coverage</div>
+        <div class="metric-value" id="m-coverage">—</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">boundary vertices</div>
+        <div class="metric-value" id="m-vertices">—</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">boundary length</div>
+        <div class="metric-value" id="m-length">—</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">IoU vs SAM2</div>
+        <div class="metric-value" id="m-iou">—</div>
+      </div>
+    </section>
+
+    <!-- ============ RESULTS ============ -->
+    <section class="panels">
+      <figure class="panel">
+        <img id="img-original" alt="original" />
+        <figcaption>Original</figcaption>
+      </figure>
+      <figure class="panel">
+        <img id="img-boundary" alt="boundary" />
+        <figcaption>Detected boundary</figcaption>
+      </figure>
+      <figure class="panel">
+        <img id="img-overlay" alt="mask overlay" />
+        <figcaption>Segmentation mask</figcaption>
+      </figure>
+      <figure class="panel">
+        <img id="img-gradient" alt="frequency gradient" />
+        <figcaption>∇f via DFT — <code>j·2πu·F</code></figcaption>
+      </figure>
+    </section>
+
+    <section class="panels freq">
+      <figure class="panel">
+        <img id="img-edges" alt="high-pass edges" />
+        <figcaption>High-pass edges</figcaption>
+      </figure>
+      <figure class="panel">
+        <img id="img-spectrum" alt="spectrum" />
+        <figcaption>log |F(u,v)| — spectrum</figcaption>
+      </figure>
+      <figure class="panel" id="saliency-panel">
+        <img id="img-saliency" alt="saliency" />
+        <figcaption>Spectral-residual saliency</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============ HOW IT WORKS ============ -->
+    <section class="card how">
+      <h2>Why this works without any learning</h2>
+      <p>
+        The <strong>differentiation property</strong> of the Fourier transform says that
+        taking a derivative is multiplying the spectrum by a ramp:
+      </p>
+      <p class="formula">ℱ{∂f/∂x} = j·2πu · F(u,v)</p>
+      <p>
+        so a gradient (an edge detector) is a <em>high-pass</em> filter in the frequency
+        domain.  The person is located two classical ways — <strong>skin colour</strong>
+        (fixed YCrCb thresholds) for RGB, <strong>hot-body thresholding</strong> (Otsu) for
+        thermal — and outlined with a <strong>spectral-residual saliency</strong> map, which
+        is also computed entirely in the Fourier domain.  See <code>theory.md</code> for the
+        derivations and <code>compare_sam2.py</code> for the SAM2 comparison.
+      </p>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    <p>GSU Computer Vision — Module 4 · Classical human boundary detection vs the SAM2 baseline.</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
